@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Excel 关键词 & 通讯录生成器</title>
+<script src="xlsx.full.min.js"></script>
+<script>
+if(!window.XLSX){
+  document.write('<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"><\/script>');
+}
+</script>
+<style>
+:root{
+  --bg:#F7F7F5; --panel:#FFFFFF; --line:rgba(0,0,0,.10); --line2:rgba(0,0,0,.16);
+  --tx:#1C1C1A; --tx2:#5F5E5A; --tx3:#888780;
+  --blue:#185FA5; --blueL:#E6F1FB; --teal:#0F6E56; --tealL:#E1F5EE;
+  --amber:#854F0B; --amberL:#FAEEDA; --red:#A32D2D; --redL:#FCEBEB;
+  --r:10px;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);
+  font:13px/1.6 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif;}
+h1{font-size:17px;font-weight:500;margin:0}
+h2{font-size:14px;font-weight:500;margin:0}
+h3{font-size:13px;font-weight:500;margin:0}
+.wrap{max-width:1240px;margin:0 auto;padding:20px 24px 80px}
+header{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+header .sub{color:var(--tx2);font-size:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:14px}
+.card>.hd{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.card>.hd .n{width:20px;height:20px;border-radius:5px;background:var(--blueL);color:var(--blue);
+  font-size:12px;display:grid;place-items:center;font-weight:500;flex:none}
+.step{font-size:11px;color:var(--tx3);margin-left:auto}
+label.fl{display:block;font-size:12px;color:var(--tx2);margin-bottom:5px}
+input[type=text],input[type=number],select,textarea{
+  width:100%;padding:7px 9px;border:1px solid var(--line2);border-radius:7px;background:#fff;
+  color:var(--tx);font:inherit;font-size:13px;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--blue)}
+textarea{resize:vertical;min-height:60px;font-family:ui-monospace,Consolas,monospace;font-size:12px}
+.row{display:flex;gap:12px;flex-wrap:wrap}
+.g{flex:1;min-width:150px}
+.g.sm{min-width:110px;max-width:220px}
+.g.xs{min-width:80px;max-width:130px}
+button{font:inherit;font-size:13px;padding:7px 14px;border-radius:7px;border:1px solid var(--line2);
+  background:#fff;color:var(--tx);cursor:pointer}
+button:hover{background:#F4F4F1}
+button.pri{background:var(--blue);color:#fff;border-color:var(--blue)}
+button.pri:hover{background:#12508C}
+button.sm{padding:4px 9px;font-size:12px}
+button.del{color:var(--red);border-color:rgba(163,45,45,.3)}
+button.del:hover{background:var(--redL)}
+button:disabled{opacity:.45;cursor:not-allowed}
+.tabs{display:flex;gap:6px;border-bottom:1px solid var(--line);margin-bottom:14px}
+.tabs button{border:none;background:none;padding:9px 16px;border-radius:0;border-bottom:2px solid transparent;
+  color:var(--tx2);font-size:13px}
+.tabs button.on{color:var(--blue);border-bottom-color:var(--blue);font-weight:500}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th,td{padding:7px 8px;text-align:left;border-bottom:1px solid var(--line);vertical-align:middle}
+th{color:var(--tx2);font-weight:500;background:#FAFAF8;position:sticky;top:0}
+tbody tr:hover{background:#FAFAF8}
+.scroll{max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+.pill{display:inline-block;padding:1px 7px;border-radius:20px;font-size:11px;background:var(--blueL);color:var(--blue)}
+.pill.t{background:var(--tealL);color:var(--teal)}
+.pill.a{background:var(--amberL);color:var(--amber)}
+.pill.r{background:var(--redL);color:var(--red)}
+.colgrid{display:flex;flex-wrap:wrap;gap:7px}
+.colchip{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border:1px solid var(--line2);
+  border-radius:7px;background:#fff;font-size:12px;cursor:pointer;user-select:none}
+.colchip:hover{border-color:var(--blue)}
+.colchip.on{background:var(--blueL);border-color:var(--blue);color:var(--blue)}
+.colchip b{font-weight:500}
+.colchip i{font-style:normal;color:var(--tx3);font-size:11px}
+.colchip.on i{color:var(--blue)}
+.colchip.off{opacity:.42}
+.hint{font-size:12px;color:var(--tx3);margin-top:7px}
+.hint b{color:var(--tx2);font-weight:500}
+.warn{background:var(--amberL);border:1px solid rgba(133,79,11,.22);color:var(--amber);
+  padding:8px 11px;border-radius:7px;font-size:12px;margin-top:10px}
+.err{background:var(--redL);border:1px solid rgba(163,45,45,.22);color:var(--red);
+  padding:8px 11px;border-radius:7px;font-size:12px;margin-top:10px}
+.ok{background:var(--tealL);border:1px solid rgba(15,110,86,.2);color:var(--teal);
+  padding:8px 11px;border-radius:7px;font-size:12px;margin-top:10px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:900px){.grid2{grid-template-columns:1fr}}
+.fld{border:1px solid var(--line);border-radius:8px;padding:10px;margin-bottom:9px;background:#FAFAF8}
+.fld .t{display:flex;gap:9px;align-items:center;margin-bottom:8px}
+.fld .t input{font-weight:500}
+.stat{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--tx2)}
+.stat b{color:var(--tx);font-weight:500;font-size:14px}
+.kwlist{max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:0;margin:0;list-style:none}
+.kwlist li{padding:6px 10px;border-bottom:1px solid var(--line);font-size:12px;display:flex;gap:9px}
+.kwlist li:last-child{border-bottom:none}
+.kwlist li span.n{color:var(--tx3);min-width:34px;text-align:right;flex:none;font-variant-numeric:tabular-nums}
+.kwlist li span.v{flex:1;word-break:break-all}
+.kwlist li.empty{color:var(--tx3);font-style:italic}
+.vcfbox{font-family:ui-monospace,Consolas,monospace;font-size:11px;white-space:pre-wrap;word-break:break-all;
+  max-height:260px;overflow:auto;background:#FAFAF8;border:1px solid var(--line);border-radius:8px;padding:11px}
+.drop{border:2px dashed var(--line2);border-radius:var(--r);padding:26px;text-align:center;cursor:pointer;background:#fff}
+.drop:hover,.drop.on{border-color:var(--blue);background:var(--blueL)}
+.drop b{display:block;font-size:14px;font-weight:500;margin-bottom:5px}
+.drop span{font-size:12px;color:var(--tx2)}
+.right{display:flex;gap:8px;align-items:center;margin-left:auto}
+code{background:#F1EFE8;padding:1px 5px;border-radius:4px;font-size:11px;font-family:ui-monospace,Consolas,monospace}
+.hide{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Excel 关键词 &amp; 通讯录生成器</h1>
+  <span class="sub">纯本地解析，文件不上传 · 列可自由组合 · 结果上限 500 条</span>
+</header>
+
+<!-- 1 上传 -->
+<div class="card">
+  <div class="hd"><span class="n">1</span><h2>选择 Excel 文件</h2></div>
+  <div class="drop" id="drop">
+    <b>点击选择，或把 .xlsx / .xls / .csv 拖到这里</b>
+    <span>解析全部在你浏览器内完成，数据不会离开这台机器</span>
+  </div>
+  <input type="file" id="file" accept=".xlsx,.xls,.csv" class="hide">
+  <div id="fileinfo" class="hint"></div>
+</div>
+
+<!-- 2 表与行 -->
+<div class="card hide" id="card2">
+  <div class="hd"><span class="n">2</span><h2>工作表与起始行</h2></div>
+  <div class="row">
+    <div class="g"><label class="fl">工作表</label><select id="sheet"></select></div>
+    <div class="g xs"><label class="fl">表头所在行</label><input type="number" id="hrow" value="1" min="1"></div>
+    <div class="g"><label class="fl" style="margin-top:22px;color:var(--tx3)">数据从表头的下一行开始读取</label></div>
+  </div>
+  <div class="hint">表头行决定列名；该行下方的所有行都是数据行。表头为空白的列会用列标（A、B、C…）代替。</div>
+</div>
+
+<!-- 3 列与字段 -->
+<div class="card hide" id="card3">
+  <div class="hd"><span class="n">3</span><h2>可用列</h2>
+    <span class="step">勾选后即可在下方组合成字段</span></div>
+  <div class="colgrid" id="colgrid"></div>
+  <div class="hint" id="colhint"></div>
+
+  <div class="hd" style="margin-top:18px"><h2>字段定义</h2>
+    <span class="step">一个字段 = 名称 + 参与列(可多列) + 分隔符</span>
+    <button class="sm right" id="addfld">+ 新建字段</button>
+  </div>
+  <div id="flds"></div>
+  <div class="hint">例如：字段名填「姓名」，勾选 <code>A列</code> 和 <code>B列</code>，分隔符留空 → 得到 A列B列 拼接的结果。</div>
+</div>
+
+<!-- 4 输出 -->
+<div class="card hide" id="card4">
+  <div class="hd"><span class="n">4</span><h2>输出</h2></div>
+  <div class="tabs">
+    <button id="tabA" class="on">通讯录 vcf</button>
+    <button id="tabB">关键词列表</button>
+  </div>
+
+  <!-- A 通讯录 -->
+  <div id="paneA">
+    <div class="hint" style="margin-bottom:10px">
+      把字段映射到通讯录属性，输出格式与手机导出的 VCF 2.1 完全一致（姓名 N/FN、姓氏拼音、昵称、手机/住宅/单位电话、邮箱、住宅/单位地址、公司、职位、备注、纪念日、生日、QQ、微信）。
+      「姓名」会自动生成 <code>N</code>（首字为姓）+ <code>FN</code>；同一属性可映射多个字段（两个手机号、多个纪念日）。
+    </div>
+    <div id="maprows"></div>
+    <button class="sm" id="addmap" style="margin-top:6px">+ 添加映射</button>
+    <div class="hint" style="margin-top:8px">
+      日期列（生日/纪念日）支持 <code>2026-10-25</code>、<code>10-25</code>、<code>10月25日</code>，自动规范成 <code>BDAY:--10-25</code> 这种格式；纪念日的标签取自字段名（字段名叫「结婚纪念日」，导入后标签就是它）。
+      学号/班级等手机不显示的信息，可以映射到「备注」。
+    </div>
+
+    <div style="margin-top:12px;padding:9px 11px;border:1px solid var(--line);border-radius:7px;background:#FAFAF8">
+      <label style="display:flex;gap:8px;align-items:flex-start;cursor:pointer">
+        <input type="checkbox" id="foldopt" style="margin-top:3px;flex:none">
+        <span style="font-size:12px;color:var(--tx2)">
+          <b style="color:var(--tx)">长行折行</b>（vCard 规范：每行 ≤75 字节，超出折成续行）<br>
+          默认<b>不勾选 = 不折行</b>，和你手机自己导出的格式一样（它导出 91 字节也是原样写的）；
+          导入失败时先保持不勾选。少数严格导入器（Outlook 等）才需要折行。
+        </span>
+      </label>
+    </div>
+
+    <div style="margin-top:16px" class="row">
+      <button class="pri" id="dovcf">生成并下载 vcf</button>
+      <button id="prevvcf">预览 vcf 内容</button>
+      <div class="right stat" id="vcfstat"></div>
+    </div>
+    <div id="vcfout"></div>
+  </div>
+
+  <!-- B 关键词 -->
+  <div id="paneB" class="hide">
+    <div class="hint" style="margin-bottom:10px">
+      模板里用 <code>{字段名}</code> 占位；可加前后缀关键词；勾选「关键词库」则与库中每条做笛卡尔积（用 <code>{关键词}</code> 指定插入位置）。
+    </div>
+    <div id="tmplrows"></div>
+    <button class="sm" id="addtmpl" style="margin-top:6px">+ 添加模板</button>
+
+    <div style="margin-top:14px" class="row">
+      <button class="pri" id="dokw">生成关键词</button>
+      <button id="copykw">复制全部</button>
+      <button id="dlkw">下载 txt</button>
+      <button id="dlcsv">下载 csv</button>
+      <div class="right stat" id="kwstat"></div>
+    </div>
+    <div id="kwout"></div>
+  </div>
+</div>
+
+</div>
+
+<script>
+"use strict";
+/* ===================== 状态 ===================== */
+const S = {
+  wb:null, sheetName:null, rows:[],        // rows: [ [cell,...], ... ] 0-based
+  headerIdx:0, cols:[],                   // cols: {idx,label,letter,on}
+  fields:[],                              // {id,name,cols:[idx],sep}
+  maps:[],                                // {id,key,field,prefix,suffix}
+  tmpls:[],                               // {id,text,lib}
+  fold:false,                             // 长行折行开关: false=不折行(与手机导出一致, 默认)
+  kws:[], vcf:""
+};
+let _id=1; const nid=()=>_id++;
+
+/* ===================== 工具 ===================== */
+function colLetter(i){ let s="",n=i; do{ s=String.fromCharCode(65+n%26)+s; n=Math.floor(n/26)-1; }while(n>=0); return s; }
+function cellText(v){
+  if(v===null||v===undefined) return "";
+  if(v instanceof Date){ const p=n=>String(n).padStart(2,"0");
+    return v.getFullYear()+"-"+p(v.getMonth()+1)+"-"+p(v.getDate()); }
+  return String(v);
+}
+function isBlank(v){ return cellText(v).trim()===""; }
+function esc(s){ return String(s).replace(/\\/g,"\\\\").replace(/,/g,"\\,").replace(/;/g,"\\;").replace(/\n/g,"\\n"); }
+
+/* ---- RFC2045 QUOTED-PRINTABLE 编码 ---- */
+/* firstBudget: 首段可用字节（需减去 "属性名;参数:" 长度）
+   restBudget : 续段可用字节（续行还要算 1 字节前导空格）
+   折行点保证不落在 "=XX" 三元组中间。 */
+function qpEncode(str, firstBudget, restBudget){
+  firstBudget = firstBudget || 71;
+  restBudget  = restBudget  || 72;
+  const bytes = new TextEncoder().encode(str);
+  const lines=[]; let cur=""; let curLen=0;
+  const flush=()=>{ if(cur){ lines.push(cur); cur=""; curLen=0; } };
+  for(let i=0;i<bytes.length;i++){
+    const b=bytes[i];
+    let piece;
+    // RFC2045 规则1: 可打印 ASCII(0x20-0x7E)除 "=" 外都可原样直通;
+    // >=0x80 的中文字节、控制字符、以及 "=" 本身必须编成 =XX。
+    // 注意: 分号/逗号/@ 等标点必须直通——手机导出的 VCF 里它们就是裸写的,
+    // 编成 =3B 虽能解码, 但会和样例对不上, 且部分老导入器不认。
+    if(b>=0x20 && b<=0x7E && b!==0x3D) piece = String.fromCharCode(b);
+    else if(b===0x0D || b===0x0A){ flush(); lines.push(""); continue; }
+    else piece = "=" + b.toString(16).toUpperCase().padStart(2,"0");
+    const budget = lines.length===0 ? firstBudget : restBudget;
+    if(curLen + piece.length > budget){
+      // 回退: 保证不劈开 "=XX" 三元组
+      let cut=cur.length;
+      while(cut>0 && /=[0-9A-F]?$/i.test(cur.slice(0,cut))) cut--;
+      const back=cur.slice(cut);
+      flush();
+      cur=back; curLen=new TextEncoder().encode(cur).length;
+    }
+    cur+=piece; curLen+=piece.length;
+  }
+  flush();
+  // 纯 RFC2425 折行: 段间 "\r\n "(续行以空格开头), 不放 QP 软换行 "="。
+  // 软换行 "=" 在"先合并折行再解码"的解析器里会和后续 =XX 混淆(如 =95=abc 被解成 0xAB),
+  // 纯折行对两种解析顺序都安全。
+  return lines.filter(x=>x!=="").join("\r\n ");
+}
+
+/* 行级折行兜底: 仅用于非 QP 行。
+   QP 行已由 qpEncode 按预算一次折到位, 不能再折(否则会劈开 "=XX")。
+   S.fold=false(默认)时不折行——手机自己的导出就是不折行的(91字节原样写),
+   部分国产 ROM 导入器对折行支持有坑, 不折行反而导得进去。 */
+function foldLine(line){
+  if(S.fold===false) return line;
+  const bytes=new TextEncoder().encode(line);
+  if(bytes.length<=75) return line;
+  const out=[]; let cur=""; let curLen=0;
+  for(const ch of line){
+    const cl=new TextEncoder().encode(ch).length;
+    if(curLen+cl>74){ out.push(cur); cur=""; curLen=0; }
+    cur+=ch; curLen+=cl;
+  }
+  if(cur) out.push(cur);
+  return out.join("\r\n ");
+}
+
+/* ===================== 1. 文件解析 ===================== */
+const drop=document.getElementById("drop"), fileIn=document.getElementById("file");
+drop.onclick=()=>fileIn.click();
+drop.ondragover=e=>{e.preventDefault();drop.classList.add("on");};
+drop.ondragleave=()=>drop.classList.remove("on");
+drop.ondrop=e=>{e.preventDefault();drop.classList.remove("on"); if(e.dataTransfer.files[0]) readFile(e.dataTransfer.files[0]);};
+fileIn.onchange=()=>{ if(fileIn.files[0]) readFile(fileIn.files[0]); };
+
+function readFile(f){
+  const fr=new FileReader();
+  fr.onload=e=>{
+    try{
+      const data=new Uint8Array(e.target.result);
+      S.wb = XLSX.read(data,{type:"array",cellDates:true});
+      document.getElementById("fileinfo").innerHTML =
+        '已读取 <b>'+esc(f.name)+'</b> · '+(f.size/1024).toFixed(1)+' KB · 工作表：'+
+        S.wb.SheetNames.map(n=>'<span class="pill">'+esc(n)+'</span>').join(' ');
+      document.getElementById("card2").classList.remove("hide");
+      const sel=document.getElementById("sheet");
+      sel.innerHTML=S.wb.SheetNames.map(n=>'<option>'+esc(n)+'</option>').join("");
+      sel.onchange=()=>loadSheet(sel.value);
+      loadSheet(sel.value);
+    }catch(err){ showErr("解析失败："+err.message); }
+  };
+  fr.readAsArrayBuffer(f);
+}
+function showErr(m){ document.getElementById("fileinfo").innerHTML='<div class="err">'+esc(m)+'</div>'; }
+
+/* ===================== 2. 工作表 ===================== */
+function loadSheet(name){
+  S.sheetName=name;
+  const ws=S.wb.Sheets[name];
+  S.rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:""});
+  document.getElementById("hrow").onchange=onHeaderChange;
+  onHeaderChange();
+}
+function onHeaderChange(){
+  let h=parseInt(document.getElementById("hrow").value,10);
+  if(!h||h<1) h=1;
+  S.headerIdx=h-1;
+  buildCols();
+  document.getElementById("card3").classList.remove("hide");
+  document.getElementById("card4").classList.remove("hide");
+}
+function buildCols(){
+  const head=S.rows[S.headerIdx]||[];
+  let width=head.length;
+  for(let i=S.headerIdx+1;i<Math.min(S.rows.length,S.headerIdx+60);i++)
+    width=Math.max(width,(S.rows[i]||[]).length);
+  width=Math.min(width,20);
+  S.cols=[];
+  for(let i=0;i<width;i++){
+    const t=cellText(head[i]).trim();
+    S.cols.push({idx:i,letter:colLetter(i),label:t||("列"+colLetter(i))});
+  }
+  renderCols(); renderFields(); updateColHint(); renderVcfStat();
+}
+function renderCols(){
+  // 只读总览: 列的选择只在"字段定义"里做, 避免两处状态打架
+  const g=document.getElementById("colgrid");
+  const used=new Set();
+  S.fields.forEach(f=>f.cols.forEach(c=>used.add(c)));
+  g.innerHTML=S.cols.map((c,i)=>
+    '<div class="colchip '+(used.has(i)?"on":"off")+'" title="'+(used.has(i)?"已被字段使用":"未使用")+'">'+
+    '<b>'+esc(c.letter)+'</b><span>'+esc(c.label)+'</span>'+
+    '<i>'+(used.has(i)?"已用":"")+'</i></div>').join("");
+}
+function updateColHint(){
+  const used=new Set(); S.fields.forEach(f=>f.cols.forEach(c=>used.add(c)));
+  document.getElementById("colhint").innerHTML=
+    '共 <b>'+S.cols.length+'</b> 列（上限 20）· 已被字段使用 <b>'+used.size+'</b> 列 · 数据行 <b>'+
+    Math.max(0,S.rows.length-S.headerIdx-1)+'</b> 行';
+}
+
+/* ===================== 3. 字段 ===================== */
+document.getElementById("addfld").onclick=()=>{
+  S.fields.push({id:nid(),name:"字段"+(S.fields.length+1),cols:[],sep:""});
+  renderFields(); updateColHint(); syncMapOptions();
+};
+function renderFields(){
+  const box=document.getElementById("flds");
+  if(!S.fields.length){ box.innerHTML='<div class="hint">还没有字段，点右上角「+ 新建字段」。</div>'; return; }
+  box.innerHTML=S.fields.map(f=>{
+    const chips=S.cols.map((c,i)=>
+      '<div class="colchip '+(f.cols.includes(i)?"on":"off")+'" data-f="'+f.id+'" data-c="'+i+'" style="padding:3px 7px">'+
+      '<b>'+esc(c.letter)+'</b><span>'+esc(c.label)+'</span></div>').join("");
+    return '<div class="fld"><div class="t">'+
+      '<input type="text" value="'+esc(f.name)+'" data-f="'+f.id+'" data-k="name" placeholder="字段名">'+
+      '<input type="text" value="'+esc(f.sep)+'" data-f="'+f.id+'" data-k="sep" placeholder="分隔符" class="g xs">'+
+      '<button class="sm del" data-del="'+f.id+'">删除</button></div>'+
+      '<div class="colgrid">'+chips+'</div></div>';
+  }).join("");
+  box.querySelectorAll("input").forEach(inp=>{
+    inp.oninput=()=>{ const f=S.fields.find(x=>x.id==inp.dataset.f); f[inp.dataset.k]=inp.value; syncMapOptions(); renderKw(); };
+  });
+  box.querySelectorAll(".colchip").forEach(el=>{
+    el.onclick=()=>{
+      const f=S.fields.find(x=>x.id==+el.dataset.f), ci=+el.dataset.c;
+      const p=f.cols.indexOf(ci);
+      if(p>=0) f.cols.splice(p,1); else f.cols.push(ci);
+      renderFields(); updateColHint(); syncMapOptions(); renderKw();
+    };
+  });
+  box.querySelectorAll("[data-del]").forEach(b=>{
+    b.onclick=()=>{ S.fields=S.fields.filter(x=>x.id!=b.dataset.del); renderFields(); syncMapOptions(); };
+  });
+}
+function fieldValue(f,row){
+  const parts=f.cols.map(c=>cellText(row[c]).trim()).filter(x=>x!=="");
+  if(!parts.length) return "";
+  return parts.join(f.sep);
+}
+function dataRows(){ return S.rows.slice(S.headerIdx+1).filter(r=>r&&r.some(c=>!isBlank(c))); }
+function fieldValMap(row){
+  const o={}; for(const f of S.fields) o[f.name]=fieldValue(f,row); return o;
+}
+
+/* ===================== 4A. 通讯录映射 ===================== */
+/* 目标属性 = 手机通讯录实际识别的 vCard 2.1 属性, 输出形态与该手机导出格式一致:
+     N;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:姓;名;;;      (姓=首字, 名=其余)
+     FN;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE:全名
+     X-PHONETIC-LAST-NAME:ceshi                                (拼音, 裸写不编码)
+     X-ANDROID-CUSTOM;…:vnd.android.cursor.item/nickname;昵称;1;……  (补齐16段)
+     TEL;CELL / TEL;HOME / TEL;WORK                            (裸写, 不带编码参数)
+     EMAIL;HOME / EMAIL;WORK                                   (裸写)
+     ADR;HOME;…:;;地址;;;;                                     (7段, 整句地址放街道段)
+     ORG / TITLE / NOTE                                        (CHARSET+QP)
+     X-ANDROID-CUSTOM;…:vnd.android.cursor.item/contact_event;--MM-DD;0;标签;……
+     BDAY:--MM-DD 或 BDAY:YYYY-MM-DD                           (裸写, 支持只有月日)
+     X-QQ / X-WECHAT                                           (裸写)                 */
+const VKEYS=[
+  ["FN","姓名（显示名）","基本信息"],
+  ["X-PHONETIC-LAST-NAME","姓氏拼音","基本信息"],
+  ["NICKNAME","昵称","基本信息"],
+  ["BDAY","生日","基本信息"],
+  ["TEL;CELL","手机","电话 / 邮箱"],
+  ["TEL;HOME","住宅电话","电话 / 邮箱"],
+  ["TEL;WORK","单位电话","电话 / 邮箱"],
+  ["EMAIL;HOME","邮箱 · 住宅","电话 / 邮箱"],
+  ["EMAIL;WORK","邮箱 · 单位","电话 / 邮箱"],
+  ["ADR;HOME","住宅地址","地址"],
+  ["ADR;WORK","单位地址","地址"],
+  ["ORG","公司","单位 / 备注"],
+  ["TITLE","职位","单位 / 备注"],
+  ["NOTE","备注","单位 / 备注"],
+  ["X-QQ","QQ","社交 / 其他"],
+  ["X-WECHAT","微信","社交 / 其他"],
+  ["EVENT","纪念日（标签=字段名）","社交 / 其他"],
+];
+/* 输出顺序(与手机导出样例一致): N/FN 固定在最前, 其余按此顺序 */
+const ORDER=["X-PHONETIC-LAST-NAME","NICKNAME","TEL;CELL","TEL;HOME","TEL;WORK",
+  "EMAIL;HOME","EMAIL;WORK","ADR;HOME","ADR;WORK","ORG","TITLE","NOTE","EVENT","BDAY","X-QQ","X-WECHAT"];
+function addMap(key,field){
+  S.maps.push({id:nid(),key:key||"FN",field:field||"",prefix:"",suffix:""});
+  renderMaps();
+}
+document.getElementById("addmap").onclick=()=>addMap();
+function renderMaps(){
+  const box=document.getElementById("maprows");
+  if(!S.maps.length){ box.innerHTML='<div class="hint">还没有映射，点「+ 添加映射」。</div>'; return; }
+  const groups={};
+  VKEYS.forEach(k=>{ (groups[k[2]]=groups[k[2]]||[]).push(k); });
+  box.innerHTML=S.maps.map(m=>{
+    const opts=S.fields.map(f=>'<option value="'+f.id+'"'+(String(m.field)===String(f.id)?" selected":"")+'>'+esc(f.name)+'</option>').join("");
+    const kopts=Object.keys(groups).map(g=>
+      '<optgroup label="'+esc(g)+'">'+
+      groups[g].map(k=>'<option value="'+k[0]+'"'+(m.key===k[0]?" selected":"")+'>'+esc(k[1])+'</option>').join("")+
+      '</optgroup>').join("");
+    return '<div class="fld"><div class="t">'+
+      '<select data-m="'+m.id+'" data-k="key" class="g">'+kopts+'</select>'+
+      '<select data-m="'+m.id+'" data-k="field" class="g">'+
+        '<option value="">（不填）</option>'+opts+'</select>'+
+      '<input type="text" value="'+esc(m.prefix)+'" data-m="'+m.id+'" data-k="prefix" placeholder="前缀" class="g xs">'+
+      '<input type="text" value="'+esc(m.suffix)+'" data-m="'+m.id+'" data-k="suffix" placeholder="后缀" class="g xs">'+
+      '<button class="sm del" data-delm="'+m.id+'">删除</button></div></div>';
+  }).join("");
+  box.querySelectorAll("select,input").forEach(el=>{
+    el.oninput=()=>{ const m=S.maps.find(x=>x.id==el.dataset.m); m[el.dataset.k]=el.value; renderVcfStat(); };
+  });
+  box.querySelectorAll("[data-delm]").forEach(b=>{
+    b.onclick=()=>{ S.maps=S.maps.filter(x=>x.id!=b.dataset.delm); renderMaps(); renderVcfStat(); };
+  });
+}
+function syncMapOptions(){ renderMaps(); renderVcfStat(); }
+
+/* ===================== 4B. 关键词模板 ===================== */
+document.getElementById("addtmpl").onclick=()=>{
+  S.tmpls.push({id:nid(),text:"",lib:""}); renderTmpls();
+};
+function renderTmpls(){
+  const box=document.getElementById("tmplrows");
+  if(!S.tmpls.length){ box.innerHTML='<div class="hint">还没有模板，点「+ 添加模板」。</div>'; return; }
+  box.innerHTML=S.tmpls.map(t=>{
+    const ph=S.fields.map(f=>"<code>{"+esc(f.name)+"}</code>").join(" ");
+    return '<div class="fld"><div class="t">'+
+      '<input type="text" data-t="'+t.id+'" data-k="text" placeholder="模板，如 {城市}的{品类}" class="g">'+
+      '<button class="sm del" data-delt="'+t.id+'">删除</button></div>'+
+      '<div style="display:flex;gap:10px;align-items:flex-start">'+
+      '<div style="flex:1"><label class="fl">关键词库（每行一条，做笛卡尔积）</label>'+
+      '<textarea data-t="'+t.id+'" data-k="lib" placeholder="北京&#10;上海">'+esc(t.lib)+'</textarea></div></div>'+
+      '<div class="hint">可用占位符：'+(ph||'<span style="color:var(--tx3)">先在第 3 步建字段</span>')+
+      ' · 关键词库配合 <code>{关键词}</code> 使用</div></div>';
+  }).join("");
+  box.querySelectorAll("[data-k]").forEach(el=>{
+    const ev = el.tagName==="TEXTAREA"?"oninput":"oninput";
+    el[ev]=()=>{ const t=S.tmpls.find(x=>x.id==el.dataset.t); t[el.dataset.k]=el.value; };
+  });
+  box.querySelectorAll("[data-delt]").forEach(b=>{
+    b.onclick=()=>{ S.tmpls=S.tmpls.filter(x=>x.id!=b.dataset.delt); renderTmpls(); };
+  });
+}
+
+/* ===================== 生成：关键词 ===================== */
+const CAP=500;
+function genKeywords(){
+  const rows=dataRows();
+  const out=[]; let truncated=false; let skipped=0;
+  const tmpls=S.tmpls.filter(t=>t.text.trim()!=="");
+  for(const row of rows){
+    const vm=fieldValMap(row);
+    for(const t of tmpls){
+      const libs=(t.lib||"").split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+      const useLib = libs.length>0;
+      const text = useLib && t.text.indexOf("{关键词}")<0 ? t.text+" {关键词}" : t.text;
+      const variants = useLib ? libs : [""];
+      for(const lib of variants){
+        const one = text.replace(/\{关键词\}/g, lib);
+        const parts = one.match(/\{[^}]*\}/g)||[];
+        let miss=false;
+        const filled = one.replace(/\{([^}]*)\}/g,(m,nm)=>{
+          const key=nm.trim();
+          const f=S.fields.find(x=>x.name===key);
+          if(!f){ miss=true; return ""; }
+          const v=vm[f.name]||"";
+          if(v==="") miss=true;
+          return v;
+        });
+        if(miss){ skipped++; continue; }
+        const val=filled.trim();
+        if(val===""){ skipped++; continue; }
+        out.push(val);
+        if(out.length>=CAP){ truncated=true; break; }
+      }
+      if(truncated) break;
+    }
+    if(truncated) break;
+  }
+  // 去重（保持顺序）
+  const seen=new Set(), uniq=[];
+  for(const v of out){ if(!seen.has(v)){ seen.add(v); uniq.push(v); } }
+  return {list:uniq, skipped, truncated, rawCount:out.length};
+}
+function renderKw(){
+  const g=genKeywords();
+  S.kws=g.list;
+  document.getElementById("kwstat").innerHTML=
+    '<span>结果 <b>'+g.list.length+'</b> 条</span>'+
+    '<span>跳过空值 <b>'+g.skipped+'</b></span>'+
+    (g.truncated?'<span class="pill a">已达 500 上限</span>':'<span class="pill t">未超上限</span>');
+  const box=document.getElementById("kwout");
+  if(!g.list.length){ box.innerHTML='<div class="hint">还没有结果。检查模板里的占位符是否对应已建字段，以及字段值是否为空。</div>'; return; }
+  box.innerHTML='<ul class="kwlist">'+g.list.map((v,i)=>
+    '<li><span class="n">'+(i+1)+'</span><span class="v">'+esc(v)+'</span></li>').join("")+'</ul>';
+}
+
+/* ===================== 生成：vcf ===================== */
+function isAsciiStr(s){ return !/[^\x00-\x7F]/.test(s); }
+function pad2(n){ return String(n).padStart(2,"0"); }
+/* 裸写属性(TEL/EMAIL/X-QQ/拼音)用的清洗: 去掉换行与分号(分号会破坏属性结构) */
+function sanitizeRaw(v){ return String(v).replace(/[\r\n]+/g," ").replace(/;/g,"").trim(); }
+/* 结构化值(昵称/纪念日标签/ADR街道段)用的清洗: 分号替换为全角, 避免撑破字段结构 */
+function sanitizeStruct(v){ return String(v).replace(/[\r\n]+/g," ").replace(/;/g,"；").trim(); }
+/* 日期归一化:
+   Date / 2026-10-25 / 2026年10月25日 -> 2026-10-25
+   10-25 / 10月25日 / --10-25        -> --10-25 (只有月日, 与手机导出一致)
+   无法识别 -> "" (跳过该属性) */
+function normDate(v){
+  const s=cellText(v).trim(); if(!s) return "";
+  let m;
+  if((m=s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/))) return m[1]+"-"+pad2(m[2])+"-"+pad2(m[3]);
+  if((m=s.match(/^(\d{4})年(\d{1,2})月(\d{1,2})日?$/)))  return m[1]+"-"+pad2(m[2])+"-"+pad2(m[3]);
+  if((m=s.match(/^--(\d{1,2})[-/.](\d{1,2})$/)))         return "--"+pad2(m[1])+"-"+pad2(m[2]);
+  if((m=s.match(/^(\d{1,2})[-/.](\d{1,2})$/)))           return "--"+pad2(m[1])+"-"+pad2(m[2]);
+  if((m=s.match(/^(\d{1,2})月(\d{1,2})日?$/)))            return "--"+pad2(m[1])+"-"+pad2(m[2]);
+  return "";
+}
+/* 写一条 QP 编码的属性行: 按头部实际长度分配首段预算, 一次折到位(每物理行<=75字节)
+   S.fold=false 时不折行(与手机导出一致)。 */
+function pushQP(L, head, value){
+  const headLen = head.length + 1;              // 含 ":"
+  const fold = S.fold !== false;
+  // 首段: 头部 + ":" + 值 <= 75(留 1 字节余量); 续段: 前导空格(1) + 值 <= 75
+  const first = fold ? Math.max(10, 74 - headLen) : Infinity;
+  const rest  = fold ? 73 : Infinity;
+  L.push(head + ":" + qpEncode(value, first, rest));
+}
+/* 生成单个属性的行(可能含折行); 值不可用时返回 [] */
+function propLines(key, v, fname){
+  const out=[];
+  if(key==="FN") return out;                    // N/FN 在 buildVcf 里特殊处理
+  if(key==="X-PHONETIC-LAST-NAME"){
+    const s=sanitizeRaw(v); if(!s) return out;
+    if(isAsciiStr(s)) out.push(foldLine("X-PHONETIC-LAST-NAME:"+s));
+    else pushQP(out,"X-PHONETIC-LAST-NAME;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE",s);
+    return out;
+  }
+  if(key==="NICKNAME"){
+    const s=sanitizeStruct(v); if(!s) return out;
+    // Android 昵称: mime;昵称;1; 然后补齐到 16 段(与手机导出一致)
+    pushQP(out,"X-ANDROID-CUSTOM;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE",
+      "vnd.android.cursor.item/nickname;"+s+";1"+";".repeat(13));
+    return out;
+  }
+  if(key==="EVENT"){
+    const d=normDate(v); if(!d) return out;
+    const lab=sanitizeStruct(fname||"纪念日");
+    // Android 纪念日: mime;日期;0;标签; 然后补齐到 16 段; 标签取自字段名
+    pushQP(out,"X-ANDROID-CUSTOM;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE",
+      "vnd.android.cursor.item/contact_event;"+d+";0;"+lab+";".repeat(12));
+    return out;
+  }
+  if(key==="BDAY"){
+    const d=normDate(v); if(!d) return out;
+    out.push(foldLine("BDAY:"+d)); return out;
+  }
+  if(key.indexOf("TEL")===0){
+    const s=sanitizeRaw(v).replace(/[\s\-()]/g,""); if(!s) return out;
+    out.push(foldLine(key+":"+s)); return out;
+  }
+  if(key.indexOf("EMAIL")===0){
+    const s=sanitizeRaw(v).replace(/[^\x21-\x7E]/g,""); if(!s) return out;
+    out.push(foldLine(key+":"+s)); return out;
+  }
+  if(key.indexOf("ADR")===0){
+    const s=sanitizeStruct(v); if(!s) return out;
+    pushQP(out,key+";CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE",";;"+s+";;;;");
+    return out;
+  }
+  if(key==="X-QQ"||key==="X-WECHAT"){
+    const s=sanitizeRaw(v); if(!s) return out;
+    if(isAsciiStr(s)) out.push(foldLine(key+":"+s));
+    else pushQP(out,key+";CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE",s);
+    return out;
+  }
+  // ORG / TITLE / NOTE
+  const s=String(v).trim(); if(!s) return out;
+  pushQP(out,key+";CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE",esc(s));
+  return out;
+}
+/* 没有姓名字段时, 用这些属性的第一个值兜底当显示名(与手机导入行为一致) */
+const NAME_FALLBACK=["TEL;CELL","TEL;HOME","TEL;WORK","EMAIL;HOME","EMAIL;WORK",
+  "X-QQ","X-WECHAT","NOTE","ORG","TITLE","ADR;HOME","ADR;WORK"];
+function buildVcf(){
+  const rows=dataRows();
+  const cards=[];
+  for(let i=0;i<rows.length && cards.length<CAP;i++){
+    const row=rows[i], vm=fieldValMap(row);
+    const groups={}, raws={};
+    let fnRaw="", fnFromField=false;
+    for(const m of S.maps){
+      if(!m.field) continue;
+      const f=S.fields.find(x=>x.id==m.field); if(!f) continue;
+      let v=vm[f.name]||""; if(v==="") continue;
+      // 前缀/后缀与值之间自动补一个空格, 避免"学号张三丰"这种粘连
+      if(m.prefix) v = m.prefix + (m.prefix.endsWith(" ")||v.startsWith(" ")?"":" ")+v;
+      if(m.suffix) v = v + (m.suffix.startsWith(" ")||v.endsWith(" ")?"":" ")+m.suffix;
+      if(m.key==="FN"){ if(!fnFromField){ fnRaw=v; fnFromField=true; } continue; }
+      const lines=propLines(m.key,v,f.name);
+      if(!lines.length) continue;
+      (groups[m.key]=groups[m.key]||[]).push(...lines);
+      if(raws[m.key]===undefined) raws[m.key]=v;
+    }
+    if(!fnRaw){ for(const k of NAME_FALLBACK){ if(raws[k]!==undefined){ fnRaw=raws[k]; break; } } }
+    if(!fnRaw && !Object.keys(groups).length) continue;   // 整行没有可导出的内容
+    const L=["BEGIN:VCARD","VERSION:2.1"];
+    // N: 姓=首字, 名=其余(中文姓名习惯); 显示名来自兜底字段时 N 留空
+    let nVal=";;;;";
+    if(fnFromField){
+      const nm=fnRaw.replace(/[\r\n;]/g,"").trim();
+      if(nm) nVal=esc(nm[0])+";"+esc(nm.slice(1))+";;;";
+    }
+    pushQP(L,"N;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE",nVal);
+    pushQP(L,"FN;CHARSET=UTF-8;ENCODING=QUOTED-PRINTABLE",esc(fnRaw));
+    for(const key of ORDER){ if(groups[key]) L.push(...groups[key]); }
+    L.push("END:VCARD");
+    cards.push(L.map(l=> /QUOTED-PRINTABLE/i.test(l) ? l : foldLine(l)).join("\r\n"));
+  }
+  return cards.join("\r\n")+"\r\n";
+}
+function renderVcfStat(){
+  const rows=dataRows();
+  let n=0;
+  for(const r of rows){ let h=false;
+    for(const m of S.maps){ if(!m.field) continue; const f=S.fields.find(x=>x.id==m.field); if(!f) continue;
+      const v=fieldValue(f,r); if(v==="") continue;
+      if(m.key==="FN" || propLines(m.key,v,f.name).length){ h=true; break; } }
+    if(h) n++; if(n>=CAP) break; }
+  const el=document.getElementById("vcfstat");
+  if(el) el.innerHTML='<span>预计生成 <b>'+n+'</b> 张卡片</span>'+(n>=CAP?'<span class="pill a">已达 500 上限</span>':'');
+}
+document.getElementById("prevvcf").onclick=()=>{
+  S.vcf=buildVcf();
+  document.getElementById("vcfout").innerHTML='<div class="vcfbox">'+esc(S.vcf||"（空）")+'</div>';
+};
+document.getElementById("dovcf").onclick=()=>{
+  S.vcf=buildVcf();
+  if(!S.vcf.trim()){ document.getElementById("vcfout").innerHTML='<div class="err">没有可用数据。</div>'; return; }
+  download("通讯录.vcf", S.vcf, "text/vcard;charset=utf-8", false);
+  document.getElementById("vcfout").innerHTML='<div class="ok">已生成 '+S.vcf.trim().split("BEGIN:VCARD").length+' 张卡片并下载。</div>';
+};
+
+/* ===================== 导出 ===================== */
+function download(name,content,mime,bom){
+  // vcf 不能带 BOM: 手机/通讯录解析器会把 BOM 当正文, 导致第一个属性解析失败
+  const blob=new Blob([(bom===false?"":"\ufeff")+content],{type:(mime||"text/plain")+";charset=utf-8"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob); a.download=name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+document.getElementById("dokw").onclick=()=>{ renderKw(); if(S.kws.length) download("关键词.txt",S.kws.join("\n"),"text/plain"); };
+document.getElementById("dlkw").onclick=()=>{ renderKw(); if(S.kws.length) download("关键词.txt",S.kws.join("\n"),"text/plain"); };
+document.getElementById("dlcsv").onclick=()=>{
+  renderKw();
+  if(!S.kws.length) return;
+  const csv="序号,关键词\n"+S.kws.map((v,i)=>(i+1)+',"'+v.replace(/"/g,'""')+'"').join("\n");
+  download("关键词.csv",csv,"text/csv");
+};
+document.getElementById("copykw").onclick=async()=>{
+  renderKw();
+  if(!S.kws.length) return;
+  try{ await navigator.clipboard.writeText(S.kws.join("\n"));
+    document.getElementById("kwout").insertAdjacentHTML("afterbegin",'<div class="ok">已复制 '+S.kws.length+' 条到剪贴板。</div>'); }
+  catch(e){ document.getElementById("kwout").insertAdjacentHTML("afterbegin",'<div class="err">复制失败，请用「下载 txt」。</div>'); }
+};
+
+/* ===================== Tab ===================== */
+document.getElementById("tabA").onclick=()=>{
+  document.getElementById("tabA").classList.add("on"); document.getElementById("tabB").classList.remove("on");
+  document.getElementById("paneA").classList.remove("hide"); document.getElementById("paneB").classList.add("hide");
+};
+document.getElementById("tabB").onclick=()=>{
+  document.getElementById("tabB").classList.add("on"); document.getElementById("tabA").classList.remove("on");
+  document.getElementById("paneB").classList.remove("hide"); document.getElementById("paneA").classList.add("hide");
+  renderKw();
+};
+
+/* ===================== 初始化 ===================== */
+document.getElementById("foldopt").onchange=function(){ S.fold=this.checked; };
+addMap("FN"); addMap("TEL;CELL");
+S.tmpls.push({id:nid(),text:"",lib:""});
+renderFields(); renderMaps(); renderTmpls();
+document.getElementById("addfld").onclick();
+</script>
+</body>
+</html>
